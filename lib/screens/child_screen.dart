@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:cross_file/cross_file.dart';
 import 'dart:io';
 
 class ChildScreen extends StatefulWidget {
@@ -235,11 +236,11 @@ class _ChildScreenState extends State<ChildScreen> {
       String message = '';
       Color titleColor = Colors.black;
       
-      if (temp < 35) {
+      if (temp < 32) {
         title = '⚠️ ОПАСНО!';
         titleColor = Colors.red;
         message = 'Слишком низкая температура! Вызывайте Скорую помощь';
-      } else if (temp >= 35 && temp < 35.5) {
+      } else if (temp >= 32 && temp < 35.5) {
         title = '⚠️ ВНИМАНИЕ!';
         titleColor = Colors.orange;
         message = 'Вероятно, ребёнок замёрз. Попытайтесь согреть. Если опустится ещё на 0,5 градуса или если есть подозрение на передозировку сосудосуживающих капель (от насморка) - вызывайте Скорую помощь.';
@@ -599,6 +600,7 @@ class _ChildScreenState extends State<ChildScreen> {
   void editChild() {
     final nameController = TextEditingController(text: widget.child.name);
     final weightController = TextEditingController(text: widget.child.weight.toString());
+    final ageController = TextEditingController(text: widget.child.age.toString());
 
     showDialog(
       context: context,
@@ -610,6 +612,12 @@ class _ChildScreenState extends State<ChildScreen> {
             TextField(
               controller: nameController,
               decoration: InputDecoration(labelText: 'Имя'),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: ageController,
+              decoration: InputDecoration(labelText: 'Возраст (месяцев)'),
+              keyboardType: TextInputType.number,
             ),
             SizedBox(height: 12),
             TextField(
@@ -628,12 +636,15 @@ class _ChildScreenState extends State<ChildScreen> {
             onPressed: () {
               final name = nameController.text.trim();
               final weightText = weightController.text.trim().replaceAll(',', '.');
+              final ageText = ageController.text.trim();
               final weight = double.tryParse(weightText);
+              final age = int.tryParse(ageText);
               
-              if (name.isNotEmpty && weight != null && weight > 0) {
+              if (name.isNotEmpty && weight != null && weight > 0 && age != null && age >= 0) {
                 setState(() {
                   widget.child.name = name;
                   widget.child.weight = weight;
+                  widget.child.age = age;
                 });
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -719,6 +730,13 @@ class _ChildScreenState extends State<ChildScreen> {
                         ),
                         Text(
                           'Вес: ${widget.child.weight} кг',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF2F4F4F),
+                          ),
+                        ),
+                        Text(
+                          'Возраст: ${widget.child.age < 12 ? "${widget.child.age} мес" : "${(widget.child.age / 12).floor()} лет"}',
                           style: TextStyle(
                             fontSize: 16,
                             color: Color(0xFF2F4F4F),
@@ -983,6 +1001,37 @@ class _ChildScreenState extends State<ChildScreen> {
               );
             }).toList(),
             onChanged: (String? newValue) {
+              // Проверка для таблеток ибупрофена
+              if (medType == 'ibuprofen' && newValue == 'Ибупрофен таблетки 200мг') {
+                final ageInYears = widget.child.age >= 12 ? widget.child.age ~/ 12 : 0;
+                if (widget.child.weight < 20 || ageInYears < 6) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('⚠️ Внимание!', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                      content: Text('Данную форму лекарства не рекомендуется давать детям до 20 кг или младше 6 лет. Если ребёнку есть 6 лет, но он весит меньше 20 кг, можно при условии что он уверенно глотает таблетки'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            setState(() {
+                              selectedIbuprofenForm = newValue;
+                              controller.clear();
+                            });
+                          },
+                          child: Text('Понятно, выбрать'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text('Отмена'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return;
+                }
+              }
+              
               setState(() {
                 if (medType == 'paracetamol') {
                   selectedParacetamolForm = newValue;
@@ -1325,55 +1374,72 @@ class _ChildScreenState extends State<ChildScreen> {
   Widget _buildCustomMedItem(CustomMedication med) {
     return Card(
       margin: EdgeInsets.only(bottom: 8),
-      child: ExpansionTile(
-        title: Text(med.name, style: TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('Осталось: ${med.remainingDays} дней'),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+      child: Padding(
+        padding: EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ElevatedButton(
-              onPressed: () => _takeCustomMedication(med.name),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF4A90A4),
-                minimumSize: Size(80, 32),
-              ),
-              child: Text('Принять', style: TextStyle(fontSize: 12)),
-            ),
-            SizedBox(width: 4),
-            IconButton(
-              icon: Icon(Icons.edit, color: Colors.blue),
-              onPressed: () => _editCustomMedication(med),
-            ),
-            IconButton(
-              icon: Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _removeCustomMedication(med),
-            ),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Text(med.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            SizedBox(height: 4),
+            Text('Осталось: ${med.remainingDays} дней'),
+            SizedBox(height: 12),
+            Row(
               children: [
-                if (med.hasReminders) ...[
-                  Text('Напоминания: включены', style: TextStyle(fontWeight: FontWeight.w500)),
-                  SizedBox(height: 4),
-                  Text('Приёмов в день: ${med.dailyDoses}'),
-                  SizedBox(height: 4),
-                  Text('Время приёма: ${med.times.map((t) => "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}").join(", ")}'),
-                  SizedBox(height: 4),
-                  Text('Продолжительность: ${med.durationDays} дней'),
-                ] else
-                  Text('Напоминания: отключены'),
-                SizedBox(height: 8),
-                Text('Начато: ${DateFormat('dd.MM.yyyy').format(med.startDate)}'),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _takeCustomMedication(med.name),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF4A90A4),
+                    ),
+                    child: Text('Принять'),
+                  ),
+                ),
+                SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => _editCustomMedication(med),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _removeCustomMedication(med),
+                ),
               ],
             ),
-          ),
-        ],
+            if (med.hasReminders) ...[
+              SizedBox(height: 8),
+              ExpansionTile(
+                title: Text('Подробности', style: TextStyle(fontSize: 14)),
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Напоминания: включены', style: TextStyle(fontWeight: FontWeight.w500)),
+                        SizedBox(height: 4),
+                        Text('Приёмов в день: ${med.dailyDoses}'),
+                        SizedBox(height: 4),
+                        Text('Время приёма: ${med.times.map((t) => "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}").join(", ")}'),
+                        SizedBox(height: 4),
+                        Text('Продолжительность: ${med.durationDays} дней'),
+                        SizedBox(height: 8),
+                        Text('Начато: ${DateFormat('dd.MM.yyyy').format(med.startDate)}'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ] else
+              Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('Напоминания: отключены'),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
   }
   
   Future<void> _selectTime(int index) async {
@@ -1637,10 +1703,22 @@ class _ChildScreenState extends State<ChildScreen> {
       // Генерируем PDF
       final pdfBytes = await pdf.save();
       
+      // Сохраняем файл
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'Отчет_${widget.child.name}_${DateFormat('dd-MM-yyyy').format(DateTime.now())}.pdf';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(pdfBytes);
+      
+      // Предлагаем поделиться файлом
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Отчёт о состоянии ${widget.child.name}',
+      );
+      
       // Показываем сообщение об успешном создании
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('PDF отчёт создан (${pdfBytes.length} байт)'),
+          content: Text('PDF отчёт создан и готов к отправке'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),

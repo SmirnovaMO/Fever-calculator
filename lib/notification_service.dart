@@ -9,6 +9,7 @@ class NotificationService {
   
   static Future<void> initialize() async {
     tz_data.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Europe/Moscow'));
     
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(

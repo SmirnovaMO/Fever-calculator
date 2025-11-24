@@ -451,22 +451,37 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                     ),
                     SizedBox(height: 12),
-                    TextField(
-                      controller: ageYearsController,
-                      decoration: InputDecoration(
-                        labelText: 'Возраст (полных лет)',
-                        prefixIcon: Icon(Icons.cake),
-                        helperText: 'Если ребёнок младше года, введите 0',
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        setState(() {
-                          showMonthsField = value == '0';
-                          if (!showMonthsField) {
-                            ageMonthsController.clear();
-                          }
-                        });
-                      },
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: ageYearsController,
+                          decoration: InputDecoration(
+                            labelText: 'Возраст (полных лет)',
+                            prefixIcon: Icon(Icons.cake),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            setState(() {
+                              showMonthsField = value == '0';
+                              if (!showMonthsField) {
+                                ageMonthsController.clear();
+                              }
+                            });
+                          },
+                        ),
+                        SizedBox(height: 4),
+                        Padding(
+                          padding: EdgeInsets.only(left: 12),
+                          child: Text(
+                            'Если ребёнок младше года, введите 0',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     if (showMonthsField) ...[
                       SizedBox(height: 12),

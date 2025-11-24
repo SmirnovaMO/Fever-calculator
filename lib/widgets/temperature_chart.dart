@@ -175,7 +175,7 @@ class TemperatureChart extends StatelessWidget {
                 show: true,
                 getDotPainter: (spot, percent, barData, index) {
                   return FlDotCirclePainter(
-                    radius: 3,
+                    radius: 4.5,
                     color: Colors.red,
                     strokeWidth: 1,
                     strokeColor: Colors.white,
@@ -282,9 +282,11 @@ class TemperatureChart extends StatelessWidget {
       }
       
       // Определяем Y координату для маркера
-      double yPosition = nearestTemp?.value ?? 37.0;
+      double yPosition;
       if (nearestTemp != null) {
-        yPosition += 0.2; // Чуть выше точки температуры
+        yPosition = nearestTemp.value + 0.3; // Чуть выше точки температуры, но не слишком
+      } else {
+        yPosition = 37.0; // Базовый уровень если нет совпадающих замеров
       }
       
       if (med.type == 'paracetamol') {
@@ -310,7 +312,7 @@ class TemperatureChart extends StatelessWidget {
           show: paraSpots.isNotEmpty,
           getDotPainter: (spot, percent, barData, index) {
             return FlDotSquarePainter(
-              size: 8,
+              size: 12,
               color: Colors.orange,
               strokeWidth: 1,
               strokeColor: Colors.white,
@@ -331,7 +333,7 @@ class TemperatureChart extends StatelessWidget {
           show: ibuSpots.isNotEmpty,
           getDotPainter: (spot, percent, barData, index) {
             return FlDotCirclePainter(
-              radius: 4,
+              radius: 6,
               color: Colors.blue,
               strokeWidth: 1,
               strokeColor: Colors.white,
@@ -352,7 +354,7 @@ class TemperatureChart extends StatelessWidget {
           show: customSpots.isNotEmpty,
           getDotPainter: (spot, percent, barData, index) {
             return FlDotTrianglePainter(
-              size: 8,
+              size: 12,
               color: Color(0xFF81C784),
               strokeWidth: 1,
               strokeColor: Colors.white,
