@@ -1,5 +1,5 @@
 name: fever_calculator
-description: Калькулятор жаропонижающих для детей
+description: Мобильное приложение для расчета дозировок жаропонижающих препаратов для детей
 
 version: 1.0.0+1
 
@@ -28,3 +28,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/fonts/
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/MaterialIcons-Regular.otf

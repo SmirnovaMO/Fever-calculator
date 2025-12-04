@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/child.dart';
 import '../models/custom_medication.dart';
@@ -691,7 +692,7 @@ class _ChildScreenState extends State<ChildScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Text('🧒 ${widget.child.name}'),
+            Text(widget.child.name),
             Spacer(),
             IconButton(
               icon: Icon(Icons.picture_as_pdf),
@@ -759,7 +760,7 @@ class _ChildScreenState extends State<ChildScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '📊 График температуры',
+                      'График температуры',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -786,7 +787,7 @@ class _ChildScreenState extends State<ChildScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '🌡️ Записать температуру',
+                      'Записать температуру',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -828,7 +829,7 @@ class _ChildScreenState extends State<ChildScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '💊 Жаропонижающие',
+                      'Жаропонижающие',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -844,10 +845,29 @@ class _ChildScreenState extends State<ChildScreen> {
 
                     // Ибупрофен
                     _buildMedicationSection('ibuprofen', Colors.blue, '🔵 Ибупрофен', ibuDose),
-                    
+                  ],
+                ),
+              ),
+            ),
+
+            SizedBox(height: 16),
+
+            // Пользовательские лекарства
+            Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Пользовательские лекарства',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2F4F4F),
+                      ),
+                    ),
                     SizedBox(height: 16),
-                    
-                    // Пользовательские лекарства
                     _buildCustomMedicationSection(),
                   ],
                 ),
@@ -864,7 +884,7 @@ class _ChildScreenState extends State<ChildScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '📅 История наблюдений',
+                      'История наблюдений',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1205,21 +1225,9 @@ class _ChildScreenState extends State<ChildScreen> {
   }
   
   Widget _buildCustomMedicationSection() {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Color(0xFFE0F2F1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Color(0xFFB2DFDB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            '📊 Пользовательские лекарства',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          SizedBox(height: 12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
           TextField(
             controller: customMedNameController,
             decoration: InputDecoration(
@@ -1245,6 +1253,8 @@ class _ChildScreenState extends State<ChildScreen> {
                       showCustomMedForm = !showCustomMedForm;
                       if (!showCustomMedForm) {
                         _resetCustomMedForm();
+                      } else {
+                        _editingMedication = null; // Сбрасываем режим редактирования
                       }
                     });
                   },
@@ -1326,10 +1336,33 @@ class _ChildScreenState extends State<ChildScreen> {
           ],
         ),
         SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: _addCustomMedication,
-          style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF81C784)),
-          child: Text('Создать курс'),
+        Row(
+          children: [
+            if (_editingMedication != null) ...[
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _saveEditedMedication,
+                  style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF81C784)),
+                  child: Text('Сохранить изменения'),
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _cancelEdit,
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                  child: Text('Назад'),
+                ),
+              ),
+            ] else
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _addCustomMedication,
+                  style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF81C784)),
+                  child: Text('Создать курс'),
+                ),
+              ),
+          ],
         ),
       ],
     );
@@ -1439,8 +1472,6 @@ class _ChildScreenState extends State<ChildScreen> {
       ),
     );
   }
-
-  }
   
   Future<void> _selectTime(int index) async {
     await showDialog(
@@ -1529,20 +1560,19 @@ class _ChildScreenState extends State<ChildScreen> {
     );
   }
   
+  CustomMedication? _editingMedication;
+  
   void _editCustomMedication(CustomMedication med) {
+    _editingMedication = med;
     customMedNameController.text = med.name;
     wantsReminders = med.hasReminders;
-    dailyDoses = med.dailyDoses;
-    selectedTimes = List.from(med.times);
+    dailyDoses = med.dailyDoses > 0 ? med.dailyDoses : 1;
+    selectedTimes = med.times.isNotEmpty ? List.from(med.times) : [TimeOfDay(hour: 8, minute: 0)];
     durationDays = med.durationDays;
     
     setState(() {
       showCustomMedForm = true;
     });
-    
-    // Удаляем старое лекарство для редактирования
-    widget.child.customMedications.remove(med);
-    NotificationService.cancelMedicationReminders(med);
   }
   
   void _removeCustomMedication(CustomMedication med) {
@@ -1566,6 +1596,56 @@ class _ChildScreenState extends State<ChildScreen> {
     dailyDoses = 1;
     selectedTimes = [TimeOfDay(hour: 8, minute: 0)];
     durationDays = 1;
+    _editingMedication = null;
+  }
+  
+  void _saveEditedMedication() {
+    final name = customMedNameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Введите название лекарства'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    if (_editingMedication != null) {
+      // Отменяем старые уведомления
+      NotificationService.cancelMedicationReminders(_editingMedication!);
+      
+      // Обновляем данные
+      setState(() {
+        _editingMedication!.name = name;
+        _editingMedication!.hasReminders = wantsReminders;
+        _editingMedication!.dailyDoses = wantsReminders ? dailyDoses : 0;
+        _editingMedication!.times = wantsReminders ? List.from(selectedTimes) : [];
+        _editingMedication!.durationDays = durationDays;
+        showCustomMedForm = false;
+      });
+      
+      // Настраиваем новые уведомления
+      if (wantsReminders) {
+        _scheduleNotifications(_editingMedication!);
+      }
+      
+      _resetCustomMedForm();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Курс "$name" обновлен'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+  
+  void _cancelEdit() {
+    setState(() {
+      showCustomMedForm = false;
+    });
+    _resetCustomMedForm();
   }
   
   void _scheduleNotifications(CustomMedication medication) {
@@ -1634,6 +1714,10 @@ class _ChildScreenState extends State<ChildScreen> {
     try {
       final pdf = pw.Document();
       
+      // Используем встроенные шрифты PDF библиотеки
+      final font = pw.Font.helvetica();
+      final fontBold = pw.Font.helveticaBold();
+      
       // Фильтруем данные по периоду
       final filteredTemps = widget.child.temperatureLog
           .where((t) => t.time.isAfter(startDate) && t.time.isBefore(endDate))
@@ -1646,33 +1730,37 @@ class _ChildScreenState extends State<ChildScreen> {
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
+          theme: pw.ThemeData.withFont(
+            base: font,
+            bold: fontBold,
+          ),
           build: (pw.Context context) {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Header(
                   level: 0,
-                  child: pw.Text('Отчёт о состоянии ${widget.child.name}'),
+                  child: pw.Text('Otchet o sostoyanii ${widget.child.name}', style: pw.TextStyle(font: fontBold, fontSize: 20)),
                 ),
                 pw.SizedBox(height: 20),
-                pw.Text('Период: ${DateFormat('dd.MM.yyyy', 'ru').format(startDate)} - ${DateFormat('dd.MM.yyyy', 'ru').format(endDate)}'),
+                pw.Text('Period: ${DateFormat('dd.MM.yyyy').format(startDate)} - ${DateFormat('dd.MM.yyyy').format(endDate)}', style: pw.TextStyle(font: font)),
                 pw.SizedBox(height: 20),
                 
                 // История наблюдений
-                pw.Text('История наблюдений:', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.Text('Istoriya nablyudeniy:', style: pw.TextStyle(font: fontBold, fontSize: 16)),
                 pw.SizedBox(height: 10),
                 
                 ...filteredTemps.map((temp) => pw.Padding(
                   padding: pw.EdgeInsets.only(bottom: 5),
-                  child: pw.Text('Температура: ${DateFormat('dd.MM HH:mm', 'ru').format(temp.time)} - ${temp.value}°C'),
+                  child: pw.Text('Temperatura: ${DateFormat('dd.MM HH:mm').format(temp.time)} - ${temp.value}C', style: pw.TextStyle(font: font)),
                 )),
                 
                 ...filteredMeds.map((med) {
                   String medName;
                   if (med.type == 'paracetamol') {
-                    medName = 'Парацетамол';
+                    medName = 'Paracetamol';
                   } else if (med.type == 'ibuprofen') {
-                    medName = 'Ибупрофен';
+                    medName = 'Ibuprofen';
                   } else if (med.type.startsWith('custom_')) {
                     medName = med.type.substring(7);
                   } else {
@@ -1681,18 +1769,18 @@ class _ChildScreenState extends State<ChildScreen> {
                   
                   return pw.Padding(
                     padding: pw.EdgeInsets.only(bottom: 5),
-                    child: pw.Text('$medName: ${DateFormat('dd.MM HH:mm', 'ru').format(med.time)} - ${med.dose > 0 ? "${med.dose}мг" : "принято"}'),
+                    child: pw.Text('$medName: ${DateFormat('dd.MM HH:mm').format(med.time)} - ${med.dose > 0 ? "${med.dose}mg" : "prinyato"}', style: pw.TextStyle(font: font)),
                   );
                 }),
                 
                 pw.SizedBox(height: 20),
-                pw.Text('Статистика:', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.Text('Statistika:', style: pw.TextStyle(font: fontBold, fontSize: 16)),
                 pw.SizedBox(height: 10),
-                pw.Text('Всего замеров температуры: ${filteredTemps.length}'),
-                pw.Text('Всего приёмов лекарств: ${filteredMeds.length}'),
+                pw.Text('Vsego zamerov temperatury: ${filteredTemps.length}', style: pw.TextStyle(font: font)),
+                pw.Text('Vsego priemov lekarstv: ${filteredMeds.length}', style: pw.TextStyle(font: font)),
                 if (filteredTemps.isNotEmpty) ...[
-                  pw.Text('Максимальная температура: ${filteredTemps.map((t) => t.value).reduce((a, b) => a > b ? a : b)}°C'),
-                  pw.Text('Минимальная температура: ${filteredTemps.map((t) => t.value).reduce((a, b) => a < b ? a : b)}°C'),
+                  pw.Text('Maksimalnaya temperatura: ${filteredTemps.map((t) => t.value).reduce((a, b) => a > b ? a : b)}C', style: pw.TextStyle(font: font)),
+                  pw.Text('Minimalnaya temperatura: ${filteredTemps.map((t) => t.value).reduce((a, b) => a < b ? a : b)}C', style: pw.TextStyle(font: font)),
                 ],
               ],
             );

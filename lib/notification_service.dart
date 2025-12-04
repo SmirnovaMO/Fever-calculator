@@ -8,23 +8,28 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   
   static Future<void> initialize() async {
-    tz_data.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Europe/Moscow'));
-    
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    
-    const settings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-    
-    await _notifications.initialize(settings);
-    await _requestPermissions();
+    try {
+      tz_data.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Europe/Moscow'));
+      
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      
+      const settings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+      
+      await _notifications.initialize(settings);
+      await _requestPermissions();
+      print('NotificationService initialized successfully');
+    } catch (e) {
+      print('Error initializing NotificationService: $e');
+    }
   }
   
   static Future<void> _requestPermissions() async {
@@ -36,45 +41,57 @@ class NotificationService {
   static Future<void> scheduleMedicationReminders(CustomMedication medication) async {
     if (!medication.hasReminders) return;
     
-    for (int day = 0; day < medication.durationDays; day++) {
-      for (int timeIndex = 0; timeIndex < medication.times.length; timeIndex++) {
-        final time = medication.times[timeIndex];
-        final scheduledDate = medication.startDate.add(Duration(days: day));
-        final scheduledTime = DateTime(
-          scheduledDate.year,
-          scheduledDate.month,
-          scheduledDate.day,
-          time.hour,
-          time.minute,
-        );
-        
-        if (scheduledTime.isAfter(DateTime.now())) {
-          final id = medication.name.hashCode + day * 100 + timeIndex;
-          
-          await _notifications.zonedSchedule(
-            id,
-            'Время принять лекарство',
-            'Пора принять ${medication.name}',
-            _convertToTZDateTime(scheduledTime),
-            const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'medication_channel',
-                'Напоминания о лекарствах',
-                channelDescription: 'Уведомления о времени приема лекарств',
-                importance: Importance.high,
-                priority: Priority.high,
-              ),
-              iOS: DarwinNotificationDetails(
-                presentAlert: true,
-                presentBadge: true,
-                presentSound: true,
-              ),
-            ),
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-            uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+    try {
+      for (int day = 0; day < medication.durationDays; day++) {
+        for (int timeIndex = 0; timeIndex < medication.times.length; timeIndex++) {
+          final time = medication.times[timeIndex];
+          final scheduledDate = medication.startDate.add(Duration(days: day));
+          final scheduledTime = DateTime(
+            scheduledDate.year,
+            scheduledDate.month,
+            scheduledDate.day,
+            time.hour,
+            time.minute,
           );
+          
+          if (scheduledTime.isAfter(DateTime.now())) {
+            final id = medication.name.hashCode + day * 100 + timeIndex;
+            
+            print('Scheduling notification for ${medication.name} at $scheduledTime with ID $id');
+            
+            await _notifications.zonedSchedule(
+              id,
+              'Время принять лекарство',
+              'Пора принять ${medication.name}',
+              _convertToTZDateTime(scheduledTime),
+              const NotificationDetails(
+                android: AndroidNotificationDetails(
+                  'medication_channel',
+                  'Напоминания о лекарствах',
+                  channelDescription: 'Уведомления о времени приема лекарств',
+                  importance: Importance.high,
+                  priority: Priority.high,
+                  enableVibration: true,
+                  playSound: true,
+                ),
+                iOS: DarwinNotificationDetails(
+                  presentAlert: true,
+                  presentBadge: true,
+                  presentSound: true,
+                ),
+              ),
+              androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+              uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+            );
+            
+            print('Notification scheduled successfully');
+          } else {
+            print('Skipping past time: $scheduledTime');
+          }
         }
       }
+    } catch (e) {
+      print('Error scheduling notifications: $e');
     }
   }
   

@@ -419,7 +419,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('🌡️ Калькулятор жаропонижающих 💊'),
+        title: Text('Калькулятор жаропонижающих'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -435,7 +435,7 @@ class _MainScreenState extends State<MainScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      '👨👩👧👦 Добавить члена семьи',
+                      'Добавить члена семьи',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
