@@ -1228,52 +1228,51 @@ class _ChildScreenState extends State<ChildScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-          TextField(
-            controller: customMedNameController,
-            decoration: InputDecoration(
-              labelText: 'Название лекарства',
-              border: OutlineInputBorder(),
+        TextField(
+          controller: customMedNameController,
+          decoration: InputDecoration(
+            labelText: 'Название лекарства',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _markCustomMedicationTaken,
+                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF4A90A4)),
+                child: Text('Отметить приём'),
+              ),
             ),
-          ),
+            SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    showCustomMedForm = !showCustomMedForm;
+                    if (!showCustomMedForm) {
+                      _resetCustomMedForm();
+                    } else {
+                      _editingMedication = null; // Сбрасываем режим редактирования
+                    }
+                  });
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF81C784)),
+                child: Text('Создать курс'),
+              ),
+            ),
+          ],
+        ),
+        if (showCustomMedForm) ...[
           SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _markCustomMedicationTaken,
-                  style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF4A90A4)),
-                  child: Text('Отметить приём'),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      showCustomMedForm = !showCustomMedForm;
-                      if (!showCustomMedForm) {
-                        _resetCustomMedForm();
-                      } else {
-                        _editingMedication = null; // Сбрасываем режим редактирования
-                      }
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF81C784)),
-                  child: Text('Создать курс'),
-                ),
-              ),
-            ],
-          ),
-          if (showCustomMedForm) ...[
-            SizedBox(height: 12),
-            _buildCustomMedForm(),
-          ],
-          if (widget.child.customMedications.isNotEmpty) ...[
-            SizedBox(height: 12),
-            _buildCustomMedList(),
-          ],
+          _buildCustomMedForm(),
         ],
-      ),
+        if (widget.child.customMedications.isNotEmpty) ...[
+          SizedBox(height: 12),
+          _buildCustomMedList(),
+        ],
+      ],
     );
   }
   
